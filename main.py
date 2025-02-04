@@ -290,9 +290,10 @@ async def check_games():
                 active_games[key] = (current_game.id, champ, lp_initial)
                 # Construction de l'embed pour annoncer le début de la partie
                 champ_icon_url = f"https://ddragon.leagueoflegends.com/cdn/13.6.1/img/champion/{champ}.png"
+
                 embed = discord.Embed(
                     title="Partie lancée",
-                    description=f"Joueur **{name}** a lancé une partie classée Solo/Duo.",
+                    description=f"**{name}** a lancé une partie classée Solo/Duo.",
                     color=discord.Color.blue(),
                 )
                 embed.add_field(name="Champion", value=champ, inline=True)
@@ -301,7 +302,14 @@ async def check_games():
                     value=f"{rank[1]} {rank[2]} - {rank[0]} LP",
                     inline=True,
                 )
-                embed.set_thumbnail(url=champ_icon_url)
+                try:
+                    response = requests.get(champ_icon_url)
+                    response.raise_for_status()
+                    embed.set_thumbnail(url=champ_icon_url)
+                except requests.exceptions.HTTPError as errh:
+                    print(
+                        f"Erreur HTTP lors de la récupération de l'icône du champion : {errh}"
+                    )
                 channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
                 if channel:
                     await channel.send(embed=embed)
@@ -330,7 +338,7 @@ async def check_games():
                     )
                     embed = discord.Embed(
                         title="Partie terminée",
-                        description=f"Joueur **{name}** a terminé sa partie sur **{champ}**.",
+                        description=f"**{name}** a terminé sa partie sur **{champ}**.",
                         color=color,
                     )
                     if lp_diff > 0:
