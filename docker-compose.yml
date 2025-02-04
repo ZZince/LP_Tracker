@@ -7,5 +7,5 @@ services:
     env_file:
       - .env
     volumes:
-      - ./players.txt:/app/players.txt
+      - ./players.txt:players.txt
     restart: always
