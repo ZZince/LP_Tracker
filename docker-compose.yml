@@ -3,9 +3,10 @@ version: "3.8"
 services:
   bot:
     build: .
-    container_name: discord-bot
+    image: LP_Tracker
+    container_name: LP_Tracker
     env_file:
       - .env
     volumes:
-      - ./players.txt:players.txt
+      - ./players:/app/players
     restart: always

@@ -27,6 +27,8 @@ mapping: dict[str, str] = {
     "II": 200,
     "III": 100,
     "IV": 0,
+    "RenataGlasc": "Renata",
+    "Wukong": "MonkeyKing",
 }
 
 # -------------------------
@@ -289,7 +291,12 @@ async def check_games():
                         break
                 active_games[key] = (current_game.id, champ, lp_initial)
                 # Construction de l'embed pour annoncer le début de la partie
-                champ_icon_url = f"https://ddragon.leagueoflegends.com/cdn/13.6.1/img/champion/{champ}.png"
+                champ_icon_name = (
+                    champ.replace(" ", "").replace("'", "").replace(".", "")
+                )
+                if champ_icon_name in mapping:
+                    champ_icon_name = mapping[champ_icon_name]
+                champ_icon_url = f"https://ddragon.leagueoflegends.com/cdn/15.3.1/img/champion/{champ_icon_name}.png"
 
                 embed = discord.Embed(
                     title="Partie lancée",
@@ -332,7 +339,12 @@ async def check_games():
                         continue
                     lp_final = rank[0] + mapping[rank[2]] + (mapping[rank[1]] * 400)
                     lp_diff = lp_final - lp_initial
-                    champ_icon_url = f"https://ddragon.leagueoflegends.com/cdn/13.6.1/img/champion/{champ}.png"
+                    champ_icon_name = (
+                        champ.replace(" ", "").replace("'", "").replace(".", "")
+                    )
+                    if champ_icon_name in mapping:
+                        champ_icon_name = mapping[champ_icon_name]
+                    champ_icon_url = f"https://ddragon.leagueoflegends.com/cdn/15.3.1/img/champion/{champ_icon_name}.png"
                     color = (
                         discord.Color.green() if lp_diff >= 0 else discord.Color.red()
                     )
@@ -341,20 +353,25 @@ async def check_games():
                         description=f"**{name}** a terminé sa partie sur **{champ}**.",
                         color=color,
                     )
+                    match = cass.get_match(game_id, region=server_str)
+                    for participant in match.participants:
+                        if participant.summoner == refreshed_summoner:
+                            break
+                    kill, death, assist = (
+                        participant.stats.kills,
+                        participant.stats.deaths,
+                        participant.stats.assists,
+                    )
                     if lp_diff > 0:
                         embed.add_field(
-                            name="Résultat", value=f"Gagné {lp_diff} LP", inline=False
-                        )
-                    elif lp_diff < 0:
-                        embed.add_field(
                             name="Résultat",
-                            value=f"Perdu {abs(lp_diff)} LP",
+                            value=f"Gagné {lp_diff} LP ({kill}/{death}/{assist})",
                             inline=False,
                         )
-                    else:
+                    elif lp_diff <= 0:
                         embed.add_field(
                             name="Résultat",
-                            value="Aucun changement de LP",
+                            value=f"Perdu {abs(lp_diff)} LP ({kill}/{death}/{assist})",
                             inline=False,
                         )
                     embed.add_field(
@@ -362,7 +379,14 @@ async def check_games():
                         value=f"{rank[1]} {rank[2]} - {rank[0]} LP",
                         inline=True,
                     )
-                    embed.set_thumbnail(url=champ_icon_url)
+                    try:
+                        response = requests.get(champ_icon_url)
+                        response.raise_for_status()
+                        embed.set_thumbnail(url=champ_icon_url)
+                    except requests.exceptions.HTTPError as errh:
+                        print(
+                            f"Erreur lors de la récupération de l'icône du champion : {errh}"
+                        )
                     channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
                     if channel:
                         await channel.send(embed=embed)
